@@ -99,7 +99,7 @@ class AddFTGToContainerView(APIView):
     def post(self,request,uid,format=None):
 
         
-        FTGUid = request.data.get('ftg_uid', None)
+        FTGUid = request.data.get('featureTypeGroup', None)
         try: 
             containerView = ContainerView.objects.get(uid = uid)
             # May raise a permission denied
@@ -134,7 +134,7 @@ class RemoveFTGToContainerView(APIView):
 
     def post(self, request,uid, format=None):
 
-        FTGUid = request.data.get('ftg_uid', None)
+        FTGUid = request.data.get('featureTypeGroup', None)
         try: 
             containerView = ContainerView.objects.get(uid = uid)
         except ContainerView.DoesNotExist:

@@ -29,7 +29,8 @@ class FeatureTypeImportSerializer(ModelSerializer):
         model = FeatureType
         fields = [
             "name",
-            "uid"
+            "uid",
+            "properties"
         ]
 
 # class FeatureTypeGroupSerializer(DynamicFieldsMixin,ModelSerializer):
@@ -57,7 +58,7 @@ class FeatureTypeImportSerializer(ModelSerializer):
 #         ]
 
 class FeatureTypeGroupSerializer(DynamicFieldsMixin,ModelSerializer):
-    featureTypes = SlugRelatedField(many =True,read_only=True,slug_field='uid')
+    featureTypes = FeatureTypeImportSerializer(many =True,read_only=True)
 
     def to_representation(self, instance):
         response = super().to_representation(instance)
@@ -148,7 +149,8 @@ class OrderedListFTByFTG(ModelSerializer):
         fields = [
             "name",
             "org",
-            "properties"
+            "properties",
+            "uid"
         ]
 
 

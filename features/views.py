@@ -49,7 +49,7 @@ from .serializers import (
     )
 
 from .paginators import FeaturePaginator
-from dependantmodels.models import Organization,OrganizationProject
+from dependantmodels.models import Organization,OrganizationProject,ContainerView
 
 from .paginators import FeaturePaginator
 from accounts.utils import RandomStringGenerator,UserClass
@@ -72,7 +72,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
-        #if self.action == 'list':
+        # if self.action == 'list':
         #return FeatureSerializer
         return FeatureCreateUpdateSerializer
 
@@ -345,11 +345,11 @@ class FeatureViewSet(viewsets.ModelViewSet):
 #     serializer_class = FeatureSerializer
 #     authentication_classes = [UserAuthentication]
 #     permission_classes = [CanReadFeature]
-#     lookup_field = 'uid'
-#     pagination_class = FeaturePaginator
+#     lookup_field = 'uid'CanUpdateFeature
+#     pagination_class = FCanUpdateFeature
 
 
-#     def retrieve(self, request, *args, **kwargs):
+#     def retrieve(self, rCanUpdateFeature:
 
 #         data = []
 #         try:
@@ -465,18 +465,18 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
         returnFormat['data'] = serializer.data
         return Response(returnFormat,status= status.HTTP_200_OK)
 
-    def list(self, request, *args, **kwargs):
+    # def list(self, request, *args, **kwargs):
 
-        returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+    #     returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
+    #     queryset = self.filter_queryset(self.get_queryset())
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        returnFormat['data'] = serializer.data
-        return Response(returnFormat,status= status.HTTP_200_OK)
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     returnFormat['data'] = serializer.data
+    #     return Response(returnFormat,status= status.HTTP_200_OK)
 
     def perform_destroy(self, instance):
         instance.active = False
@@ -517,8 +517,18 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         return Response({"success": True, "data" :data },status = status.HTTP_200_OK )
     
     def list(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success': True, 'errorList': [], 'data': []}
+        
+        containerUid = self.request.query_params.get('container', None)
+        returnFormat = {'success': True, 'errorList': [], 'data': []}
         queryset = self.filter_queryset(self.get_queryset())
+        if containerUid:
+            cvs = ContainerView.objects.filter(uid = containerUid)
+            if cvs.exists():
+                cv = cvs.first()
+                ftgUids = cv.featureTypeGroups.all().values_list('uid', flat = True)
+                queryset_test = queryset.filter(uid__in = ftgUids)
+                queryset = queryset_test
+                
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -545,7 +555,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         """
         Creates the FeatureTypeGroup and Connect the FeatureTypeGroup to FeatureType
         """
-
+        featureTypes = []
         returnFormat = {'error': False, 'success': False, 'errorList': [], 'data': []}
 
         if not UserClass.UserIsSuperUser(request.user) and not request.data.get('org') and request.user.get('organization'):
@@ -553,20 +563,18 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         elif not UserClass.UserIsSuperUser(request.user) and not(request.data.get('org') == request.user.get('organization')):
             return Response({'error': True, 'success': False, 'errorList': "associating featuretypegroup with diffrenet organization", 'data': []}, status= status.HTTP_400_BAD_REQUEST)
 
-
         if request.data.get('featureTypes'): 
             featureTypes = FeatureType.objects.filter(uid__in = request.data.get('featureTypes'))
             if not featureTypes.count() == len(request.data.get('featureTypes')):
                 return Response({'error': True, 'success': False, 'errorList': "FeaturesTypes either of them doesnot exist", 'data': []}, status= status.HTTP_404_NOT_FOUND)
-        else:
-            return Response({'error': True, 'success': False, 'errorList': "FeaturesTypes uid is not provided", 'data': []}, status= status.HTTP_404_NOT_FOUND)
-            
+       
         # create the FTG
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             instance = self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            featureTypes.update(featureTypeGroup = instance)
+            if featureTypes:
+                featureTypes.update(featureTypeGroup = instance)
             returnFormat['data'] = self.get_serializer(instance).data
             returnFormat['success'] = True
             return Response(returnFormat, status=status.HTTP_201_CREATED, headers=headers)
@@ -581,7 +589,6 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         """
 
         featureTypes= []
-        returnFormat = {'error': False, 'success': False, 'errorList': [], 'data': []}
         partial = kwargs.pop('partial', False)
         
         try:
@@ -589,44 +596,31 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
             instance = self.get_queryset().get(uid = uid )
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
+    
+        # updating the FTG
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            returnFormat = {}
+            returnFormat['success'] = True
+            returnFormat['data'] = self.get_serializer(instance).data
+            return Response(returnFormat, status = status.HTTP_200_OK)
 
-        if request.data.get("featureTypes"):
-            featureTypes = FeatureType.objects.filter(uid__in = request.data['featureTypes'])
-            if not (featureTypes.count() == len(request.data['featureTypes'])):
-                returnFormat['error'] = True
-                returnFormat['errorList'] = "Feature Type with either one or all of the uid's doesnot exist"
-                return Response(errorList, status=status.HTTP_404_NOT_FOUND)
-            
-            # updating the FTG
-            serializer = self.get_serializer(instance, data=request.data, partial=partial)
-            if serializer.is_valid():
-                FeatureType.objects.filter(featureTypeGroup = instance).update(featureTypeGroup = None)
-                self.perform_update(serializer)
-                if featureTypes:
-                    featureTypes.update(featureTypeGroup = instance)
-                returnFormat['success'] = True
-                returnFormat['data'] = self.get_serializer(instance).data
-                return Response(returnFormat, status = status.HTTP_202_ACCEPTED)
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
 
-            if getattr(instance, '_prefetched_objects_cache', None):
-                # If 'prefetch_related' has been applied to a queryset, we need to
-                # forcibly invalidate the prefetch cache on the instance.
-                instance._prefetched_objects_cache = {}
-
-        return Response({'error': True, 'errorList': serializer.errors ,'success': False, 'data': []}, status= status.HTTP_400_BAD_REQUEST)
-
-            
-            
+        return Response({'error': True, 'errorList': serializer.errors}, status= status.HTTP_400_BAD_REQUEST)
+  
     def destroy(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success': False, 'errorList': [], 'data': []}
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
             FeatureType.objects.filter(featureTypeGroup = instance).update(featureTypeGroup = None)
             self.perform_destroy(instance)
         except self.get_queryset().model.DoesNotExist:
-            return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
-        returnFormat['success'] = True
-        return Response(returnFormat, status=status.HTTP_204_NO_CONTENT)
+            return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
+        return Response({'success': True}, status=status.HTTP_204_NO_CONTENT)
 
 

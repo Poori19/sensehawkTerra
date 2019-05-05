@@ -35,7 +35,9 @@ class CanReadContainer(permissions.BasePermission):
     message = {'error': True, 'success': 'False', 'errorList': "You do not have permission to perform this action."}
    
     def has_object_permission(self, request, view, obj):
-    
+
+        if SuperUserPermission.has_permission(self, request, view):
+            return True
     
         if IsObjReadUser.has_object_permission(self, request, view, obj ):
             return True
