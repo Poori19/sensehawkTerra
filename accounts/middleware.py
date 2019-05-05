@@ -42,17 +42,19 @@ class OktaAuthenticationMiddleware(MiddlewareMixin):
             tokenDict = wholeToken.split(" ")
             tokenType = tokenDict[0]
             token = tokenDict[1]   
+
+            #import pdb;pdb.set_trace()
                     
             # verify from okta for the access token
             if tokenType.upper() == "BEARER":
                 try:
-                    issuer = "https://dev-802525.okta.com/oauth2/default"       
+                    issuer = "https://dev-612233.oktapreview.com/oauth2/default"       
                     #client_ids = ["0oad5bqrmkOMOxq8X356"]
                     #audience = "api://default" 
 
                     #issuer = env.str('OKTA_ISSUER_URL') 
-                    client_ids = [env.str('CLIENT_ID')  ]
-                    audience = env.str('OKTA_AUTH_SERVER')                                                                                                                                                                                                     
+                    client_ids = ["0oajynre6wdHJZ2I20h7" ]
+                    audience = "api://default"                                                                                                                                                                                                   
                     dataResponse = validate_token(token, issuer, audience, client_ids)  
         
                     # just for purpose of testing/remove after testing
@@ -76,7 +78,7 @@ class OktaAuthenticationMiddleware(MiddlewareMixin):
                     
                     # set the organization
                     if dataResponse.get('org', { 'uid': None }):
-                        user['organization'] = dataResponse.get('org').get('uid')
+                        user['organization'] = dataResponse.get('org', { 'uid': None }).get('uid')
                     
                     # set the is_manager
                     if 'is_manager' in dataResponse:

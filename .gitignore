@@ -1,7 +1,7 @@
 *.pyc
 *~
 */__pycache__
-*/migrations
+*/migrations/*
 db.sqlite3
 /static
 .DS_Store

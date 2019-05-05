@@ -519,7 +519,6 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         
         containerUid = self.request.query_params.get('container', None)
-        returnFormat = {'success': True, 'errorList': [], 'data': []}
         queryset = self.filter_queryset(self.get_queryset())
         if containerUid:
             cvs = ContainerView.objects.filter(uid = containerUid)
@@ -534,8 +533,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
-        returnFormat['data'] = serializer.data
-        return Response(returnFormat,status = status.HTTP_200_OK)
+        return Response(serializer.data,status = status.HTTP_200_OK)
 
     def get_queryset(self, *args, **kwargs):
 
