@@ -136,7 +136,7 @@ class OrganizationGroupSerializerProjectsPerGroup(ModelSerializer):
     class Meta:
         model = OrganizationGroup
         fields = [ "uid",
-                    "name",
+                    "name"
         ]
 
 class OrderedListProjectSerializer(ListSerializer):

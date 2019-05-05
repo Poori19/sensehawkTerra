@@ -242,9 +242,12 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
                 eachGroupSuccessData = {'group' : None , 'projects': []}
 
                 groupData['containerView'] = containerView.pk
+                groupData['organization'] = returnOrgData.pk
                 returnGroupData = OrganizationGroupMethods.CreateOrUpdateGroup(groupData)
+
                 if isinstance(returnGroupData, OrganizationGroup):
 
+                
                     eachGroupSuccessData['group'] = returnGroupData.pk
 
                     # clear all the projects

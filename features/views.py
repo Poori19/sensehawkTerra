@@ -48,17 +48,13 @@ from .serializers import (
     OrderedListFTByFTG
     )
 
-from .permissions import (
-    CanCreateUpdateFeature,
-    CanReadFeature
-)
 from .paginators import FeaturePaginator
 from dependantmodels.models import Organization,OrganizationProject
 
 from .paginators import FeaturePaginator
 from accounts.utils import RandomStringGenerator,UserClass
 from django_filters.rest_framework import DjangoFilterBackend
-from .permissions import CanCreateUpdateFeature,CanReadFeature
+from .permissions import CanCreateFeature,CanReadFeature,CanUpdateFeature
 from rest_framework.pagination import PageNumberPagination,LimitOffsetPagination # Any other type works as well
 
 
@@ -72,7 +68,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
     lookup_field = 'uid'
     permission_classes = []
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('project','project__group__organization',)
+    filterset_fields = ('project')
     pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
@@ -84,16 +80,19 @@ class FeatureViewSet(viewsets.ModelViewSet):
         """
         Instantiates and returns the list of permissions that this view requires.
         """
-        if self.action in ['create', 'update']:
-            permission_classes = [CanCreateUpdateFeature]
+        
+        if self.action in ['create','featurecreate']:
+            permission_classes = [CanCreateFeature]
         elif self.action in ['retrieve']:
             permission_classes = [CanReadFeature]
+        elif self.action in ['update', 'delete']:
+            permission_classes = [CanUpdateFeature]
         else:
             permission_classes  = []
         return [permission() for permission in permission_classes]
 
     def get_queryset(self, *args, **kwargs):
-        
+
         queryset = self.queryset
         user = self.request.user
 
@@ -107,16 +106,23 @@ class FeatureViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         return serializer.save(owner = self.request.user)
 
-    def create(self, request, *args, **kwargs):
+    @action(methods=['post'], detail=False,renderer_classes=[JSONRenderer], url_name='create Feature', url_path='project/(?P<project_uid>[^/.]+)/',    authentication_classes = [UserAuthentication])
+    def featurecreate(self, request, *args, **kwargs):
         """ Overiding the create function """
 
         returnFormat = {'error': False, 'success': False, 'data': {}, 'errorList': {}} 
+
+        projectUid = kwargs.get('project_uid')
+        try:
+            project = OrganizationProject.objects.get(uid = projectUid)
+        except OrganizationProject.DoesNotExist:
+            return Response({'error': True, 'errorList': 'project with this uid doesnot exist'}, status = status.HTTP_404_NOT_FOUND)
 
         # Bulk create
         
         if request.data.get('type', {}) and (request.data.get('type') == "FeatureCollection"):
             features = request.data.get('features', [])
-
+           
             for index,feature in enumerate(features):
                 errorData = []
                 if feature.get('properties', {}):
@@ -130,15 +136,17 @@ class FeatureViewSet(viewsets.ModelViewSet):
                     # lse:
                     #    errorData.append("featureType uid is not provided")
 
-                    if feature.get("properties", {}).get("project", None):
-                        projectUid  = feature.get('properties').get('project')
-                        projects = OrganizationProject.objects.filter(uid = projectUid)
-                        if not projects.exists():
-                            errorData.append("project with uid doesnot exist")
-                        else:
-                            feature['properties']['project'] = projects.first().pk
-                    else:
-                        errorData.append("project uid is not provided")
+                    # if feature.get("properties", {}).get("project", None):
+                    #     projectUid  = feature.get('properties').get('project')
+                    #     projects = OrganizationProject.objects.filter(uid = projectUid)
+                    #     if not projects.exists():
+                    #         errorData.append("project with uid doesnot exist")
+                    #     else:
+                    #         feature['properties']['project'] = projects.first().pk
+                    # else:
+                    #     errorData.append("project uid is not provided")
+
+                    feature['properties']['project'] = project.pk
                 else:
                     errorData.append("features doenot contain the attribute properties")
 
@@ -148,7 +156,8 @@ class FeatureViewSet(viewsets.ModelViewSet):
                         featureObj = self.perform_create(serializer)
                         returnFormat['data'][index] = featureObj.uid
                     else:
-                        errorData.append(serializer.errors)
+                        returnFormat['error'] = True
+                        returnFormat['errorList'][index] = serializer.errors
                 else:
                     returnFormat['error'] = True
                     returnFormat['errorList'][index] = errorData
@@ -169,15 +178,17 @@ class FeatureViewSet(viewsets.ModelViewSet):
             # else:
             #     errorData.append("featureType uid is not provided")
 
-            if request.data.get("properties", {}).get("project", None):
-                projectUid  = request.data.get('properties').get('project')
-                projects = OrganizationProject.objects.filter(uid = projectUid)
-                if projects.exists():
-                    request.data['properties']['project'] = projects.first().pk
-                else:
-                    errorData.append("project with uid doesnot exist")
-            else:
-                errorData.append("project uid is not provided")
+            # if request.data.get("properties", {}).get("project", None):
+            #     projectUid  = request.data.get('properties').get('project')
+            #     projects = OrganizationProject.objects.filter(uid = projectUid)
+            #     if projects.exists():
+            #         request.data['properties']['project'] = projects.first().pk
+            #     else:
+            #         errorData.append("project with uid doesnot exist")
+            # else:
+            #     errorData.append("project uid is not provided")
+
+            request.data['properties']['project'] = project.pk
             
             if not errorData:
                 serializer = self.get_serializer(data=request.data)
@@ -231,9 +242,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
             featureTypes = FeatureType.objects.filter(uid = featureTypeUid )
             if featureTypes.exists():
                 request.data['properties']['featureType'] = featureTypes.first().pk
-            else:
-                errorData.append("featureType with uid not found")
-        
+            
         if projectUid:
             projects = OrganizationProject.objects.filter(uid = projectUid)
             if projects.exists():
@@ -246,6 +255,10 @@ class FeatureViewSet(viewsets.ModelViewSet):
             try:
                 uid = kwargs.get('uid', None)
                 instance = self.get_queryset().get(uid =uid )
+
+                # May raise a permission denied
+                self.check_object_permissions(self.request, instance)
+
             except self.get_queryset().model.DoesNotExist:
                 return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
             
@@ -270,9 +283,14 @@ class FeatureViewSet(viewsets.ModelViewSet):
 
 
     def retrieve(self, request, *args, **kwargs):
+
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid =uid )
+
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(instance)
