@@ -1,0 +1,1 @@
+returnFormat = {'error': False, 'success': False, 'data': [], 'errorList': []}

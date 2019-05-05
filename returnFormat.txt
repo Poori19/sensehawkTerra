@@ -1,0 +1,10 @@
+
+
+# Return Format of all the functions of the application 
+
+{
+    'success' : True/False
+    'data' : []
+    'error' : True/False
+    'errorList' : []
+}
