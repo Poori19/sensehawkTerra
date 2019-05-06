@@ -478,19 +478,14 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
     #     returnFormat['data'] = serializer.data
     #     return Response(returnFormat,status= status.HTTP_200_OK)
 
-    def perform_destroy(self, instance):
-        instance.active = False
-        instance.save()
-
     def destroy(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
             self.perform_destroy(instance)
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
-        return Response(returnFormat,status=status.HTTP_204_NO_CONTENT)
+        return Response({'success': True},status=status.HTTP_204_NO_CONTENT)
 
     # def get_serializer_class(self):
     #     if self.action in ['create', 'update', 'partial_update']:
@@ -615,7 +610,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
-            FeatureType.objects.filter(featureTypeGroup = instance).update(featureTypeGroup = None)
+            FeatureType.objects.filter(featureTypeGroup = instance).delete()
             self.perform_destroy(instance)
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)

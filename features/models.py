@@ -15,7 +15,7 @@ from accounts.utils import RandomStringGenerator
 class FeatureTypeGroup(models.Model):
 
     uid = models.CharField(max_length=220,unique = True,editable = False)
-    name  = models.CharField(max_length=220,unique = True)
+    name  = models.CharField(max_length=220)
     active =  models.BooleanField(default=True)
     org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True) 
     owner = JSONField()
@@ -24,7 +24,7 @@ class FeatureTypeGroup(models.Model):
         return self.name
 
 class FeatureType(models.Model):
-    name  = models.CharField(max_length=220,unique = True)
+    name  = models.CharField(max_length=220)
     uid = models.CharField(max_length=220,unique = True,editable = False)
     org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True) 
     featureTypeGroup = models.ForeignKey(FeatureTypeGroup,related_name='featureTypes', on_delete=models.SET_NULL, null=True, blank = True)

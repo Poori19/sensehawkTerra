@@ -73,7 +73,7 @@ class OktaAuthenticationMiddleware(MiddlewareMixin):
                         user['status'] = dataResponse['status']
                     
                     # set the role
-                    if dataResponse.get('role', { 'name': None }):
+                    if dataResponse.get('user_role', { 'name': None }):
                         user['role'] = dataResponse.get('user_role', {}).get('name', None)
                     
                     # set the organization
@@ -145,7 +145,7 @@ class OktaAuthenticationMiddleware(MiddlewareMixin):
                         user['status'] = dataResponse['status']
                     
                     # set the role
-                    if dataResponse.get('role', { 'name': None }):
+                    if dataResponse.get('user_role', { 'name': None }):
                         user['role'] = dataResponse.get('user_role', {}).get('name', None)
                     
                     # set the organization
