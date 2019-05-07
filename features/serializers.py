@@ -162,6 +162,8 @@ class FeatureTypeCreateUpdateSerializer(ModelSerializer):
             "org",
             "properties"
         ]
+    
+    
 
 
 
@@ -207,7 +209,17 @@ class FeatureCreateUpdateSerializer(GeoFeatureModelSerializer):
             response['properties']['uid'] = instance.uid
         return response
 
+  
 
+    def validate_project(self, value):
+        # validation process...
+        if not value:
+            raise ValidationError("project uid is required")
+        return value
+
+    
+
+    
 class FeatureSerializer(GeoFeatureModelSerializer):
     """ A class to serialize locations as GeoJSON compatible data """
 

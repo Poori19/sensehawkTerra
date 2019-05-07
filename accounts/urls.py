@@ -1,7 +1,7 @@
 from django.conf.urls import url
 
-from . import views
+from .views import userDetail
 
 urlpatterns = [
-    url(r'^detail/$', views.detail, name='random'),
+    url(r'^detail/$',userDetail.as_view(), name='userDetail'),
 ]

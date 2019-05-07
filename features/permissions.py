@@ -8,6 +8,36 @@ from general.permissions import (
     IsObjReadUser
 )
 
+class CanListFeature(permissions.BasePermission):
+    """ Check if the user has permission to create Feature """
+
+    message = {'error': True, 'success': 'False', 'errorList': "you don't have permission to create model feature"}
+
+    def has_permission(self, request, view):
+
+        projectUid = request.parser_context.get('kwargs').get('project_uid', None)
+
+        if SuperUserPermission.has_permission(self, request, view):
+            return True
+
+        containerViewUid = OrganizationProject.objects.filter(uid = projectUid).values_list('group__containerView', flat = True)   
+        
+        if containerViewUid and containerViewUid[0]:
+
+            containerView = ContainerView.objects.get(uid = containerViewUid[0])    
+
+            if IsObjReadUser.has_object_permission(self, request, view, containerView ):
+                return True
+
+            if containerView.organization and IsObjReadUser.has_object_permission(self, request, view, containerView.organization ):
+                return True
+                    
+            if containerView.organization and IsManagerOrOwner.has_object_permission(self, request, view,containerView, containerView.organization.uid):
+                return True
+
+        return False
+
+
 class CanCreateFeature(permissions.BasePermission):
     """ Check if the user has permission to create Feature """
 
@@ -15,6 +45,7 @@ class CanCreateFeature(permissions.BasePermission):
 
     def has_permission(self, request, view):
         
+
         projectUid = request.parser_context.get('kwargs').get('project_uid', None)
 
         if SuperUserPermission.has_permission(self, request, view):
@@ -44,7 +75,6 @@ class CanUpdateFeature(permissions.BasePermission):
     message = {'error': True, 'success': 'False', 'errorList': "you don't have permission to model feature"}
     def has_object_permission(self, request, view, obj):
 
-        
         if SuperUserPermission.has_permission(self, request, view):
             return True
 
@@ -68,7 +98,7 @@ class CanReadFeature(permissions.BasePermission):
     
     message = {'error': True, 'success': 'False', 'errorList': "you don't have permission to model feature"}
     def has_object_permission(self, request, view, obj):
-        
+
         if SuperUserPermission.has_permission(self, request, view):
             return True
 

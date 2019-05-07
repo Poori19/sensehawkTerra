@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
     '*'
 ]
 
+# APPEND_SLASH=False
 
 # Application definition
 
@@ -50,6 +51,7 @@ DJANGO_APPS = [
     'containers',
     'features',
     'elements',
+    #'broker',
     #'viewtables',
     #'tables',
     #'dataapp',

@@ -7,6 +7,16 @@ from .utils import  (
 from accounts.constants import SUPER_USER_ROLES
 
 
+class BlockPermission(permissions.BasePermission):
+    """
+    Check if the user is manager or owner
+    """
+    message = {'error': True, 'success': 'False', 'errorList': "You do not have permission to perform this action."}
+    def has_permission(self, request, view):
+        return False
+
+
+
 class SuperUserPermission(permissions.BasePermission):
     """
     Check if the user has role of superUser 
