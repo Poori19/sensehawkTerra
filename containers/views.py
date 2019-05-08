@@ -203,11 +203,50 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
         return Response(returnData)
 
     @staticmethod
+    def mapPermissionsBasedOnModels(data):
+        permisionData = {}
+        permKeyValues = {
+            'read_labels': 'readLabels',
+            'read_users': 'readUsers',
+            'write_labels': 'writeLabels',
+            'write_users': 'writeUsers'
+        }
+
+        for key, value in permKeyValues.items():
+            if data.get(key):
+                permisionData[value] = data[key]
+            else:
+                permisionData[value] = []
+        return permisionData
+
+    @staticmethod
+    def getReadAndWriteUsersAndLabelsFromEntityAsset(data):
+        permissions = {'readUsers': [], 'readLabels': [], 'writeLabels': [], 'writeUsers': []}
+
+        # from entity
+        if data.get('entity'): 
+            entityPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('entity'))
+            for key , value in entityPermissions.items():
+                if key in permissions:
+                    permissions[key].extend(value)
+
+        if data.get('asset'): 
+            assetPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('asset'))
+            for key , value in assetPermissions.items():
+                if key in permissions:
+                    permissions[key].extend(value)
+
+        return permissions
+
+    @staticmethod
     def CreateOrUpdateOrgContainerAndAttachGroups(data): 
-        
+
         dataDict = {}
         if data.get('organization', None) and data.get('container', None) and 'groups' in data:
             
+            permissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.getReadAndWriteUsersAndLabelsFromEntityAsset(data)
+            data['organization'].update(permissions)
+
             # organization Creation
             returnOrgData = OrganizationMethods.CreateOrUpdateOrg(data.get('organization'))
             if isinstance(returnOrgData,Organization):
@@ -225,7 +264,10 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
             if isinstance(returnContainerData,ContainerView):
                 containerView = returnContainerData
                 dataDict['containerView'] = containerView.uid
-                
+
+                # clear all the groups
+                containerView.organizationgroup_set.clear()  
+
             elif returnContainerData.get('error', None):
                 returnContainerData['error']['container_uid'] = data.get('container').get('uid')
                 return {'error': True, 'errorList':returnContainerData.get('error'),'data': dataDict}
@@ -233,7 +275,7 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
             # creation of groups
             groupsData = data.get('groups', None)
             groupErrorList = []; dataDict['groups'] = []; 
-            projectErrorList = []; dataDict['projects'] = [] 
+            projectErrorList = []; 
 
 
             for groupData in groupsData:
@@ -246,7 +288,6 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
 
                 if isinstance(returnGroupData, OrganizationGroup):
 
-                
                     eachGroupSuccessData['group'] = returnGroupData.pk
 
                     # clear all the projects
@@ -256,7 +297,12 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
                     projectDataDictList = groupData.get('projects', [])
 
                     for projectDataDict in projectDataDictList:
+
                         projectDataDict['group'] = returnGroupData.pk
+
+                        if 'reports' in projectDataDict:
+                            projectDataDict['data'] = projectDataDict['reports']
+
                         projectData = OrganizationProjectMethods.CreateOrUpdateProject(projectDataDict)
                         if not isinstance(projectData, OrganizationProject):
                             projectError = projectData.get('error')

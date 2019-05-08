@@ -100,15 +100,6 @@ class OrganizationCreateUpdateSerializer(ModelSerializer):
 
 
 class OrganizationProjectSerializer(DynamicFieldsMixin,ModelSerializer):
-    def to_representation(self, instance): 
-        data = None
-        response = super().to_representation(instance)
-        if instance:
-            if instance.data:
-                data = OrganizationProjectData.sendUrls(instance.data)
-            if data: 
-                response.update(data)
-        return response
     class Meta:
         model = OrganizationProject
         fields = [
@@ -124,20 +115,50 @@ class OrganizationProjectSerializer(DynamicFieldsMixin,ModelSerializer):
             'group'
         ]
 
+
+class OrganizationProjectSerializerWithData(DynamicFieldsMixin,ModelSerializer):
+
+    vectors = SerializerMethodField('get_vectors_details')
+    def to_representation(self, instance):
+        data = None
+        response = super().to_representation(instance)
+        if instance and instance.data:
+            reportData = OrganizationProjectData.send_urls_and_pre_signed_urls_data(instance.data)
+            response['reports'] = reportData
+        return response
+    class Meta:
+        model = OrganizationProject
+        fields = [
+            'uid',
+            'name',
+            'active',
+            'readUsers', 
+            'writeUsers', 
+            'description',
+            'readLabels',
+            'writeLabels',
+            'group',
+            'vectors'
+        ]
+
+    def get_vectors_details(self, obj):
+        return ("/features/project/" + obj.uid)
         
 
 class OrganizationGroupSerializerProjectsPerGroup(ModelSerializer):
+    
     def to_representation(self, instance): 
         response = super().to_representation(instance)
         if instance:
             projects = instance.organizationproject_set.all()
-            response['projects'] = OrganizationProjectSerializer(projects, many = True).data   
+            response['projects'] = OrganizationProjectSerializerWithData(projects, many = True).data   
         return response
     class Meta:
         model = OrganizationGroup
         fields = [ "uid",
                     "name"
         ]
+
 
 class OrderedListProjectSerializer(ListSerializer):
     

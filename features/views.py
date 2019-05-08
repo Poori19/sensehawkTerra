@@ -72,6 +72,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
+
         if self.action in ['featureCreateAndList']  and  self.request.method == 'POST':
             return FeatureCreateUpdateSerializer
 
@@ -114,6 +115,18 @@ class FeatureViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(Q(project__group__organization__uid = user['organization']) | Q(owner__uid = user['uid']))
         return queryset
+
+    # def list(self, request, *args, **kwargs):
+    #     import pdb;pdb.set_trace()
+    #     queryset = self.filter_queryset(self.get_queryset())
+
+    #     page = self.paginate_queryset(queryset)
+    #     if page is not None:
+    #         serializer = self.get_serializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+
+    #     serializer = self.get_serializer(queryset, many=True)
+    #     return Response(serializer.data)
 
 
     def perform_create(self, serializer):

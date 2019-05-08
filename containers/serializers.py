@@ -47,5 +47,6 @@ class ContainerViewSerializer(ModelSerializer):
             'writeUsers',
             'readLabels',
             'writeLabels',
-            'organization'   
+            'organization',
+            'active'  
         ]

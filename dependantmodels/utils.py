@@ -90,9 +90,6 @@ class OrganizationProjectMethods:
         #     if not projectDict.get('owner', None):
         #         projectDict['owner'] = []
 
-        #     if 'description' in projectDict and not projectDict['description']:
-        #         projectDict['description'] = 'test description'
-
         if OrganizationProject.objects.filter(uid = projectDict['uid']).exists():
             projectInstance = OrganizationProject.objects.filter(uid = projectDict['uid']).first()
             project = OrganizationProjectSerializer(projectInstance,data =projectDict )

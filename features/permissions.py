@@ -20,10 +20,13 @@ class CanListFeature(permissions.BasePermission):
         if SuperUserPermission.has_permission(self, request, view):
             return True
 
+        if IsManagerOrOwner.has_permission(self, request, view):
+            return True
+
         containerViewUid = OrganizationProject.objects.filter(uid = projectUid).values_list('group__containerView', flat = True)   
         
         if containerViewUid and containerViewUid[0]:
-
+            
             containerView = ContainerView.objects.get(uid = containerViewUid[0])    
 
             if IsObjReadUser.has_object_permission(self, request, view, containerView ):
@@ -32,9 +35,6 @@ class CanListFeature(permissions.BasePermission):
             if containerView.organization and IsObjReadUser.has_object_permission(self, request, view, containerView.organization ):
                 return True
                     
-            if containerView.organization and IsManagerOrOwner.has_object_permission(self, request, view,containerView, containerView.organization.uid):
-                return True
-
         return False
 
 
@@ -78,6 +78,9 @@ class CanUpdateFeature(permissions.BasePermission):
         if SuperUserPermission.has_permission(self, request, view):
             return True
 
+        if IsManagerOrOwner.has_permission(self, request, view):
+            return True
+
         if obj and obj.project and obj.project.group and obj.project.group.containerView:  
 
             containerView= obj.project.group.containerView
@@ -88,9 +91,6 @@ class CanUpdateFeature(permissions.BasePermission):
             if containerView.organization and IsObjWriteUser.has_object_permission(self, request, view, containerView.organization ):
                 return True
                     
-            if containerView.organization and IsManagerOrOwner.has_object_permission(self, request, view,containerView, containerView.organization.uid):
-                return True
-
         return False
 
 class CanReadFeature(permissions.BasePermission):
@@ -102,6 +102,10 @@ class CanReadFeature(permissions.BasePermission):
         if SuperUserPermission.has_permission(self, request, view):
             return True
 
+        if IsManagerOrOwner.has_permission(self, request, view):
+            return True
+
+
         if obj and obj.project and obj.project.group and obj.project.group.containerView:  
 
             containerView = obj.project.group.containerView
@@ -111,8 +115,5 @@ class CanReadFeature(permissions.BasePermission):
 
             if containerView.organization and IsObjReadUser.has_object_permission(self, request, view, containerView.organization ):
                 return True
-                    
-            if containerView.organization and IsManagerOrOwner.has_object_permission(self, request, view,containerView, containerView.organization.uid):
-                return True
-                
+                        
         return False

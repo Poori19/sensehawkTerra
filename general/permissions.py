@@ -43,7 +43,7 @@ class IsManagerOrOwner(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
         if type(user) == dict:
-            if (user.get('is_owner',False) or user.get('is_manager',False)) and user.get('organization') :
+            if (user.get('is_owner',False) or user.get('is_manager',False)):
                 return True
         return False
 
