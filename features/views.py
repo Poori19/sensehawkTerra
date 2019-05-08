@@ -62,7 +62,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
     """
     A viewset for model 'FeatureType'
     """
-    queryset = Feature.objects.filter(active = True)
+    queryset = Feature.objects.filter(active = True,project__active = True)
     serializer_class = FeatureCreateUpdateSerializer
     authentication_classes = [UserAuthentication]
     lookup_field = 'uid'
@@ -199,7 +199,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
 
 
     @action(methods=['get'], detail=True,renderer_classes=[JSONRenderer],url_path='master', authentication_classes = [UserAuthentication])
-    def hierarchyProjects(self, request, *args, **kwargs):
+    def hierarchyFeatures(self, request, *args, **kwargs):
         data = []
         try:
             uid = kwargs.get('uid', None)
@@ -207,7 +207,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
 
-        features =  self.get_queryset().filter(Q(hierarchyProperties = {'master_uid' : instance.uid})  | Q(uid = instance.uid)).distinct()
+        features =  self.get_queryset().filter(Q(hierarchyProperties__master_uid = instance.uid)  | Q(uid = instance.uid)).distinct()
         if features.exists():
             serializer = self.get_serializer(features, many = True)
         return Response(serializer.data, status= status.HTTP_200_OK)
@@ -237,7 +237,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
         if request.method == 'GET':
             features = []
             if kwargs.get("project_uid"):  
-                filters = {'project__uid': kwargs.get("project_uid")} 
+                filters = {'project__uid': kwargs.get("project_uid"), 'project__active': True} 
                 features = self.get_queryset().filter(**filters)
             serializer = self.get_serializer(features, many = True)
             return Response(serializer.data, status= status.HTTP_200_OK)
@@ -247,7 +247,7 @@ class FeatureViewSet(viewsets.ModelViewSet):
 
             projectUid = kwargs.get('project_uid')
             try:
-                project = OrganizationProject.objects.get(uid = projectUid)
+                project = OrganizationProject.objects.get(uid = projectUid,active = True)
             except OrganizationProject.DoesNotExist:
                 return Response({'error': True, 'errorList': 'project with this uid doesnot exist'}, status = status.HTTP_404_NOT_FOUND)
 

@@ -1,12 +1,24 @@
-import boto3
-from accounts.constants import SIGNED_URL_EXPIRATION_TIME
+import boto3, botocore 
+from botocore.client import Config 
+from accounts.constants import SIGNED_URL_EXPIRATION_TIME,PRE_SIGNED_URL_REPORTSTYPE
  
 class AWSSignedUrl():
 
     @staticmethod
+    def get_aws_session():
+        session = boto3.session.Session(aws_access_key_id = env.str('aws_access_key_id'), aws_secret_access_key = env.str('aws_secret_access_key')) 
+        return session
+
+    @staticmethod
     def get_s3_connected(region):
-        s3 = boto3.client('s3',region_name=region)
+        session = AWSSignedUrl.get_aws_session()
+        s3 = session.client('s3', config=Config(signature_version='s3v4', region_name=region)) 
         return s3
+
+    # @staticmethod
+    # def get_s3_connected(region):
+    #     s3 = boto3.client('s3',region_name=region)
+    #     return s3
 
     @staticmethod
     def get_signed_url(bucketName,key,region,expirationTime):
@@ -41,11 +53,11 @@ class OrganizationProjectData:
     @staticmethod
     def send_urls_and_pre_signed_urls_data(data):
         
-        dataList = [{'name': eachData.get('report_type'), 'service': eachData.get('service')} for eachData in data]    
+        dataList = [{'report_type': eachData.get('report_type'), 'service': eachData.get('service')} for eachData in data if eachData.get('report_type') in PRE_SIGNED_URL_REPORTSTYPE ]    
         returnData = {}
 
         for dataElement in dataList:
-            name = dataElement.get('name')
+            name = dataElement.get('report_type')
             if dataElement.get('service', {}).get('name') == 'aws_s3':
                 returnData[name] = OrganizationProjectData.aws_get_signed_urls(dataElement.get('service'))
 
