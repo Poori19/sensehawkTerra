@@ -2,8 +2,9 @@
 def getAllTheWriteUsers(obj):
     users = []
     try:
-        for eachUser in obj.writeUsers:
-            users.append(eachUser['uid'])
+        if obj.writeUsers:
+            for eachUser in obj.writeUsers:
+                users.append(eachUser['uid'])
     except Exception as e: 
         print(e)
     return users
@@ -12,8 +13,9 @@ def getAllTheWriteUsers(obj):
 def getAllTheReadUsers(obj):
     users = []
     try:
-        for eachUser in obj.readUsers:
-            users.append(eachUser['uid'])
+        if obj.readUsers:
+            for eachUser in obj.readUsers:
+                users.append(eachUser['uid'])
     except Exception as e: 
         print(e)
     return users
@@ -38,17 +40,18 @@ def checkUserInWriteUsers(obj,user):
     return False
 
 def checkUserLabelInObjReadLables(obj,user):
-    
-    for label in list(user['labels']):
-        if label in obj.readLabels:
-            return True
+    if obj.readLabels:
+        for label in list(user['labels']):
+            if label in obj.readLabels:
+                return True
     return False
 
 def checkUserLabelInObjWriteLables(obj,user):
     try:
-        for label in list(user['labels']):
-            if label in obj.writeLabels:
-                return True
+        if obj.writeLabels:
+            for label in list(user['labels']):
+                if label in obj.writeLabels:
+                    return True
     except Exception as e: 
         print(e)
     return False
