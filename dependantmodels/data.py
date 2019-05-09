@@ -1,7 +1,9 @@
 import boto3, botocore 
 from botocore.client import Config 
 from accounts.constants import SIGNED_URL_EXPIRATION_TIME,PRE_SIGNED_URL_REPORTSTYPE
- 
+import environ
+env = environ.Env()
+
 class AWSSignedUrl():
 
     @staticmethod
@@ -52,13 +54,22 @@ class OrganizationProjectData:
 
     @staticmethod
     def send_urls_and_pre_signed_urls_data(data):
-        
-        dataList = [{'report_type': eachData.get('report_type'), 'service': eachData.get('service')} for eachData in data if eachData.get('report_type') in PRE_SIGNED_URL_REPORTSTYPE ]    
-        returnData = {}
 
-        for dataElement in dataList:
-            name = dataElement.get('report_type')
-            if dataElement.get('service', {}).get('name') == 'aws_s3':
-                returnData[name] = OrganizationProjectData.aws_get_signed_urls(dataElement.get('service'))
+        #dataList = [{'report_type': eachData.get('report_type'), 'service': eachData.get('service')} for eachData in data if eachData.get('report_type') in PRE_SIGNED_URL_REPORTSTYPE ]    
+        returnData = {}
+        for reportType in PRE_SIGNED_URL_REPORTSTYPE:
+            returnData[reportType] = {}
+            dataElement = data.get(reportType,None)
+            if dataElement:
+                eachReturnData = {}
+                eachReturnData['uid'] = dataElement.get('uid',None)
+                eachReturnData['name'] = dataElement.get('name',None)
+
+                service = dataElement.get('service',{})
+                if service.get('name',None) == 'aws_s3':
+                    eachReturnData['url'] = OrganizationProjectData.aws_get_signed_urls(service)
+                if reportType in ['orthotiles']:
+                    eachReturnData['tile_url'] =  "https://maps.sensehawk.com/" + dataElement.get('uid')
+                returnData[reportType] = eachReturnData
 
         return returnData
