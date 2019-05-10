@@ -65,8 +65,6 @@ class IsObjReadUser(permissions.BasePermission):
     """
     def has_object_permission(self, request, view, obj):
 
-        #import pdb;pdb.set_trace()
-    
         #Instance must have an attribute named `owner`.
         user = request.user
         if checkUserHasReadPermission(obj,user):
@@ -86,5 +84,18 @@ class IsObjWriteUser(permissions.BasePermission):
         # Instance must have an attribute named `owner`.
         if  checkUserHasWritePermission(obj,user):
             return True 
+        return False
+
+class IsObjOwner(permissions.BasePermission):
+    """
+        Check if the user is the owner of the object.
+    """
+
+    def has_object_permission(self, request, view, obj):
+
+        user = request.user
+
+        if obj.owner and user.get('uid') and (obj.owner.get('uid',None) == user.get('uid')):
+            return True
         return False
 

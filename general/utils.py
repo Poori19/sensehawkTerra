@@ -28,6 +28,7 @@ def checkUserIsOwner(obj,user):
 
 
 def checkUserInReadUsers(obj,user):
+ 
     users = getAllTheReadUsers(obj)
     if user.get('uid', None) and user['uid'] in users:
         return True
@@ -41,16 +42,18 @@ def checkUserInWriteUsers(obj,user):
 
 def checkUserLabelInObjReadLables(obj,user):
     if obj.readLabels:
+        objLabels = list(map(lambda d: d.get('uid'), obj.readLabels))
         for label in list(user['labels']):
-            if label in obj.readLabels:
+            if label in objLabels:
                 return True
     return False
 
 def checkUserLabelInObjWriteLables(obj,user):
     try:
         if obj.writeLabels:
+            objLabels = list(map(lambda d: d.get('uid'), obj.writeLabels))
             for label in list(user['labels']):
-                if label in obj.writeLabels:
+                if label in objLabels:
                     return True
     except Exception as e: 
         print(e)

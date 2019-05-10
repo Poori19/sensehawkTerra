@@ -5,7 +5,8 @@ from general.permissions import (
     SuperUserPermission,
     IsObjWriteUser, 
     IsManagerOrOwner,
-    IsObjReadUser
+    IsObjReadUser,
+    IsObjOwner
 )
 
 class CanUpdateContainer(permissions.BasePermission):
@@ -16,6 +17,9 @@ class CanUpdateContainer(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
 
         if SuperUserPermission.has_permission(self, request, view):
+            return True
+
+        if IsObjOwner.has_object_permission(self, request, view, obj ):
             return True
 
         if IsObjWriteUser.has_object_permission(self, request, view, obj ):
@@ -36,9 +40,13 @@ class CanReadContainer(permissions.BasePermission):
    
     def has_object_permission(self, request, view, obj):
 
+       
         if SuperUserPermission.has_permission(self, request, view):
             return True
-    
+
+        if IsObjOwner.has_object_permission(self, request, view, obj ):
+            return True
+
         if IsObjReadUser.has_object_permission(self, request, view, obj ):
             return True
 
@@ -49,6 +57,9 @@ class CanReadContainer(permissions.BasePermission):
             return True
 
         return False
+
+
+
 
 
 

@@ -82,6 +82,20 @@ class ContainerViewListAPIView(ListAPIView):
                 return self.queryset.filter(**filters)
         return ContainerView.objects.none() 
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        userUid = user.get('uid')
+
+        if UserClass.UserIsSuperUser(user) or user.get('is_manager') or user.get('is_owner') :
+            filteredQueryset = queryset
+        else:
+            filterDict = [{'uid': userUid}]
+            filteredQueryset_1 = queryset.filter(Q(readLabels__contains = filterDict) | Q(readUsers__contains = filterDict)| Q(writeUsers__contains = filterDict) | Q(writeLabels__contains = filterDict) | Q(owner__uid = userUid))
+            filteredQueryset_2 = queryset.filter(Q(organization__readLabels__contains = filterDict) | Q(organization__readUsers__contains = filterDict)| Q(organization__writeUsers__contains = filterDict) | Q(organization__writeLabels__contains = filterDict))
+            filteredQueryset = filteredQueryset_1 | filteredQueryset_2
+        serializer = self.get_serializer(filteredQueryset, many=True)
+        return Response(serializer.data)
+
     
 
         
@@ -217,6 +231,12 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
                 permisionData[value] = data[key]
             else:
                 permisionData[value] = []
+
+        if data.get('owner',None):
+
+            permisionData['readUsers'].append(data.get('owner'))
+            permisionData['writeUsers'].append(data.get('owner'))
+
         return permisionData
 
     @staticmethod

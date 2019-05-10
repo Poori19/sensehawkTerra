@@ -81,6 +81,9 @@ class CanUpdateFeature(permissions.BasePermission):
         if IsManagerOrOwner.has_permission(self, request, view):
             return True
 
+        if IsObjOwner.has_object_permission(self, request, view, obj ):
+            return True
+
         if obj and obj.project and obj.project.group and obj.project.group.containerView:  
 
             containerView= obj.project.group.containerView
@@ -104,7 +107,6 @@ class CanReadFeature(permissions.BasePermission):
 
         if IsManagerOrOwner.has_permission(self, request, view):
             return True
-
 
         if obj and obj.project and obj.project.group and obj.project.group.containerView:  
 

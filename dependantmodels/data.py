@@ -1,6 +1,6 @@
 import boto3, botocore 
 from botocore.client import Config 
-from accounts.constants import SIGNED_URL_EXPIRATION_TIME,PRE_SIGNED_URL_REPORTSTYPE
+from accounts.constants import SIGNED_URL_EXPIRATION_TIME,PRE_SIGNED_URL_REPORTSTYPE,ORTHO_TILES_URL
 import environ
 env = environ.Env()
 
@@ -48,8 +48,7 @@ class OrganizationProjectData:
     def aws_get_signed_urls(dataElement):
         url = ""
         if dataElement.get('bucket') and dataElement.get('key'):
-            url = AWSSignedUrl.get_signed_url(dataElement.get('bucket'),dataElement.get('key'),dataElement.get('region') ,SIGNED_URL_EXPIRATION_TIME)
-        
+            url = AWSSignedUrl.get_signed_url(dataElement.get('bucket'),dataElement.get('key'),dataElement.get('region') ,SIGNED_URL_EXPIRATION_TIME)        
         return url
 
     @staticmethod
@@ -69,7 +68,6 @@ class OrganizationProjectData:
                 if service.get('name',None) == 'aws_s3':
                     eachReturnData['url'] = OrganizationProjectData.aws_get_signed_urls(service)
                 if reportType in ['orthotiles']:
-                    eachReturnData['tile_url'] =  "https://maps.sensehawk.com/" + dataElement.get('uid')
+                    eachReturnData['tile_url'] =  ORTHO_TILES_URL + dataElement.get('uid')
                 returnData[reportType] = eachReturnData
-
         return returnData

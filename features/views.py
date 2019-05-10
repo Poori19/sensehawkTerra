@@ -94,10 +94,10 @@ class FeatureViewSet(viewsets.ModelViewSet):
         if self.action in ['featureCreateAndList', 'featuresGroupByGroup']  and  self.request.method == 'GET':
             permission_classes = [CanListFeature]
 
-        if self.action in ['create']:
+        if self.action in ['create', 'list']:
             permission_classes = [BlockPermission]
 
-        elif self.action in ['retrieve']:
+        elif self.action in ['retrieve', 'hierarchyFeatures']:
             permission_classes = [CanReadFeature]
 
         elif self.action in ['update', 'destroy']:
@@ -204,6 +204,8 @@ class FeatureViewSet(viewsets.ModelViewSet):
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(**kwargs )
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
 
