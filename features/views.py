@@ -45,7 +45,8 @@ from .serializers import (
     FeatureCreateUpdateSerializer,
     FeatureTypeGroupSerializer,
     FeatureTypeGroupCustomSerializer,
-    OrderedListFTByFTG
+    OrderedListFTByFTG,
+    FeatureTypeGroupSerializerIncludePk
     )
 
 from .paginators import FeaturePaginator
@@ -57,6 +58,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import CanCreateFeature,CanReadFeature,CanUpdateFeature,CanListFeature
 from rest_framework.pagination import PageNumberPagination,LimitOffsetPagination # Any other type works as well
 from general.permissions import BlockPermission
+from accounts.permissions import SuperUserPermission
 
 class FeatureViewSet(viewsets.ModelViewSet):
     """
@@ -94,8 +96,11 @@ class FeatureViewSet(viewsets.ModelViewSet):
         if self.action in ['featureCreateAndList', 'featuresGroupByGroup']  and  self.request.method == 'GET':
             permission_classes = [CanListFeature]
 
-        if self.action in ['create', 'list']:
+        if self.action in ['create']:
             permission_classes = [BlockPermission]
+
+        if self.action in ['list']:
+            permission_classes = [SuperUserPermission]
 
         elif self.action in ['retrieve', 'hierarchyFeatures']:
             permission_classes = [CanReadFeature]
@@ -443,11 +448,14 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
+
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid =uid )
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
         except self.get_queryset().model.DoesNotExist:
-            return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
+            return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
     
         serializer = self.get_serializer(instance)
         returnFormat['data'] = serializer.data
@@ -523,6 +531,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         
         containerUid = self.request.query_params.get('container', None)
+        includePk = self.request.query_params.get('pk', False)
         queryset = self.filter_queryset(self.get_queryset())
         if containerUid:
             cvs = ContainerView.objects.filter(uid = containerUid)
@@ -531,13 +540,27 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
                 ftgUids = cv.featureTypeGroups.all().values_list('uid', flat = True)
                 queryset_test = queryset.filter(uid__in = ftgUids)
                 queryset = queryset_test
-                
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
+        if not includePk:
+            serializer = self.get_serializer(queryset, many=True)
+        else:
+            serializer = FeatureTypeGroupSerializerIncludePk(queryset,many = True)
         return Response(serializer.data,status = status.HTTP_200_OK)
+
+    def retrieve(self, request, *args, **kwargs):
+
+        includePk = self.request.query_params.get('pk', False)
+        try:
+            uid = kwargs.get('uid', None)
+            instance = self.get_queryset().get(uid =uid )
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+        except self.get_queryset().model.DoesNotExist:
+            return Response({'error': True, 'errorList': 'object wit uid doesnot exist' }, status= status.HTTP_404_NOT_FOUND)
+        if not includePk:
+            serializer = self.get_serializer(instance)
+        else:
+            serializer = FeatureTypeGroupSerializerIncludePk(instance)
+        return Response(serializer.data)
 
     def get_queryset(self, *args, **kwargs):
 

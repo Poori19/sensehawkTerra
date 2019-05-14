@@ -4,16 +4,16 @@ from django.contrib.gis.db import models
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save,post_save
 from django.utils import timezone
 from django.contrib.postgres.fields import JSONField
 
 from dependantmodels.models import Organization,OrganizationProject
 from accounts.utils import RandomStringGenerator
-
+from elements.models import Element 
 
 class FeatureTypeGroup(models.Model):
-
+    element = models.OneToOneField(Element,null = True, blank = True)
     uid = models.CharField(max_length=220,unique = True,editable = False)
     name  = models.CharField(max_length=220)
     active =  models.BooleanField(default=True)
@@ -24,6 +24,7 @@ class FeatureTypeGroup(models.Model):
         return self.name
 
 class FeatureType(models.Model):
+    element = models.OneToOneField(Element,null = True, blank = True)
     name  = models.CharField(max_length=220)
     uid = models.CharField(max_length=220,unique = True,editable = False)
     org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True) 
@@ -48,12 +49,13 @@ class Feature(models.Model):
         Creating the model FEATURE
         The foreign key projects has to be in the given views
     """
+    element = models.OneToOneField(Element,null = True, blank = True)
     uid = models.CharField(max_length=220,unique = True,editable = False)
     name  = models.CharField(max_length=220, blank=True, null=True)
     description =  models.TextField(null = True)
     featureType = models.ForeignKey(FeatureType, on_delete=models.SET_NULL, null=True, blank = True)
     project = models.ForeignKey(OrganizationProject, on_delete=models.SET_NULL, null=True,blank = True)
-    geometry = models.PolygonField()
+    geometry = models.GeometryField()
     dataProperties = JSONField(null = True)
     hierarchyProperties = JSONField(null = True)
     extraProperties = JSONField(null = True)

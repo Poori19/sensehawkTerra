@@ -24,13 +24,23 @@ LIST_SERIALIZER_KWARGS = (
 )
 
 
+class FeatureTypeImportSerializerIncludePk(ModelSerializer):
+    class Meta:
+        model = FeatureType
+        fields = [
+            "name",
+            "uid",
+            "properties",
+            "id"
+        ]
+
 class FeatureTypeImportSerializer(ModelSerializer):
     class Meta:
         model = FeatureType
         fields = [
             "name",
             "uid",
-            "properties"
+            "properties",
         ]
 
 # class FeatureTypeGroupSerializer(DynamicFieldsMixin,ModelSerializer):
@@ -56,6 +66,23 @@ class FeatureTypeImportSerializer(ModelSerializer):
 #             'featureTypes',
 #             'org'
 #         ]
+
+class FeatureTypeGroupSerializerIncludePk(DynamicFieldsMixin,ModelSerializer):
+    featureTypes = FeatureTypeImportSerializerIncludePk(many =True,read_only=True)
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        if instance:
+            response['uid'] = instance.uid
+        return response
+
+    class Meta:
+        model = FeatureTypeGroup
+        fields = [
+            'name',
+            'org',
+            'featureTypes'
+        ]
 
 class FeatureTypeGroupSerializer(DynamicFieldsMixin,ModelSerializer):
     featureTypes = FeatureTypeImportSerializer(many =True,read_only=True)
@@ -102,6 +129,7 @@ class FeatureTypeGroupSerializerCustomForList(ModelSerializer):
         fields = [
             'name',
             'org',
+            'uid'
         ]
 
 class OrderedListFTSerializer(ListSerializer):
@@ -223,8 +251,24 @@ class FeatureCreateUpdateSerializer(GeoFeatureModelSerializer):
 class FeatureSerializer(GeoFeatureModelSerializer):
     """ A class to serialize locations as GeoJSON compatible data """
 
-    project = OrganizationProjectImportSerializer(read_only = True)
-    featureType = FeatureTypeSerializer(read_only = True)
+    #project = OrganizationProjectImportSerializer(read_only = True)
+    #featureType = FeatureTypeSerializer(read_only = True)
+
+    featureTypeId = SerializerMethodField()
+
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        if instance.featureType:
+            response['properties']['featureType'] = instance.featureType.uid
+        if instance.uid:
+            response['properties']['uid'] = instance.uid
+        return response
+
+    def get_featureTypeId(self,instance):
+        featureTypeId = None
+        if instance.featureType:
+            featureTypeId =  instance.featureType.id
+        return featureTypeId
 
     class Meta:
         model = Feature
@@ -235,6 +279,7 @@ class FeatureSerializer(GeoFeatureModelSerializer):
                     "name",
                     "description",
                     "featureType",
+                    "featureTypeId",
                     "project",
                     "geometry",
                     "dataProperties",

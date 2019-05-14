@@ -84,9 +84,9 @@ class ContainerViewListAPIView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        userUid = user.get('uid')
+        userUid = request.user.get('uid')
 
-        if UserClass.UserIsSuperUser(user) or user.get('is_manager') or user.get('is_owner') :
+        if UserClass.UserIsSuperUser(request.user) or request.user.get('is_manager') or request.user.get('is_owner') :
             filteredQueryset = queryset
         else:
             filterDict = [{'uid': userUid}]
@@ -96,7 +96,6 @@ class ContainerViewListAPIView(ListAPIView):
         serializer = self.get_serializer(filteredQueryset, many=True)
         return Response(serializer.data)
 
-    
 
         
 class AddFTGToContainerView(APIView):
@@ -217,7 +216,31 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
         return Response(returnData)
 
     @staticmethod
-    def mapPermissionsBasedOnModels(data):
+    def popDataAttributes(data):
+        popKeys = [
+            'read_labels',
+            'read_users',
+            'write_labels',
+            'write_users'
+        ]
+        for key in popKeys:
+            data.pop(key)
+
+        return data
+
+    @staticmethod
+    def removeDuplicates(data):
+        from iteration_utilities import unique_everseen  
+        permissionkeys = ["readLabels", "readUsers", "writeLabels", "writeUsers"]
+        for key in permissionkeys:
+            if data.get(key):
+                data[key] = list(unique_everseen(data.get(key)))
+
+        return data
+
+    @staticmethod
+    def mapPermissionsBasedOnModels(data,model = None):
+        from iteration_utilities import unique_everseen     
         permisionData = {}
         permKeyValues = {
             'read_labels': 'readLabels',
@@ -232,12 +255,30 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
             else:
                 permisionData[value] = []
 
-        if data.get('owner',None):
-
+        if model in ['asset', 'entity'] and data.get('owner',None):
             permisionData['readUsers'].append(data.get('owner'))
             permisionData['writeUsers'].append(data.get('owner'))
 
+        permisionData = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.removeDuplicates(permisionData)
         return permisionData
+
+
+    @staticmethod
+    def updateContainerPermissions(containerData, permissions):
+        keys = ["readLabels", "readUsers", "writeLabels", "writeUsers"]
+    
+        containerPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(containerData)
+        containerData.update(containerPermissions)
+        containerData = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.popDataAttributes(containerData)
+        for key in keys:
+            if permissions.get(key):
+                if containerData.get(key):
+                    containerData[key].extend(permissions.get(key))
+                else:
+                    containerData[key] = permissions.get(key)
+        containerData = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.removeDuplicates(containerData)
+        return containerData
+    
 
     @staticmethod
     def getReadAndWriteUsersAndLabelsFromEntityAsset(data):
@@ -245,13 +286,13 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
 
         # from entity
         if data.get('entity'): 
-            entityPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('entity'))
+            entityPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('entity'), 'entity')
             for key , value in entityPermissions.items():
                 if key in permissions:
                     permissions[key].extend(value)
 
         if data.get('asset'): 
-            assetPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('asset'))
+            assetPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('asset'), 'asset')
             for key , value in assetPermissions.items():
                 if key in permissions:
                     permissions[key].extend(value)
@@ -263,11 +304,10 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
 
         dataDict = {}
         if data.get('organization', None) and data.get('container', None) and 'groups' in data:
-            
-            permissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.getReadAndWriteUsersAndLabelsFromEntityAsset(data)
-            data['organization'].update(permissions)
-
+        
             # organization Creation
+            orgPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(data.get('organization'))
+            data.get('organization').update(orgPermissions)
             returnOrgData = OrganizationMethods.CreateOrUpdateOrg(data.get('organization'))
             if isinstance(returnOrgData,Organization):
                 dataDict['org'] = returnOrgData.uid
@@ -275,9 +315,10 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
                 errorList = returnOrgData.get('error')
                 errorList['org_uid'] = data.get('organization').get('uid')
                 return {'error': True, 'errorList':errorList, 'data': dataDict}
-            
+
+            containerPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.getReadAndWriteUsersAndLabelsFromEntityAsset(data)
             # creation of container 
-            containerData = data.get('container')
+            containerData = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.updateContainerPermissions(data.get('container'), containerPermissions)
             containerData['organization'] =  returnOrgData.pk
             returnContainerData = ContainerViewMethods.CreateorUpdateContainerView(containerData)
             
@@ -302,6 +343,10 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
 
                 eachGroupSuccessData = {'group' : None , 'projects': []}
 
+                groupPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(groupData)
+                groupData.update(groupPermissions)
+                groupData = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.popDataAttributes(groupData)
+                
                 groupData['containerView'] = containerView.pk
                 groupData['organization'] = returnOrgData.pk
                 returnGroupData = OrganizationGroupMethods.CreateOrUpdateGroup(groupData)
@@ -311,12 +356,17 @@ class CreateOrUpdateOrgContainerAndAttachGroupsFromJson(APIView):
                     eachGroupSuccessData['group'] = returnGroupData.pk
 
                     # clear all the projects
+                    returnGroupData.organizationproject_set.all().update(active = False)    
                     returnGroupData.organizationproject_set.clear()  
 
                     # create Project
                     projectDataDictList = groupData.get('projects', [])
 
                     for projectDataDict in projectDataDictList:
+
+                        projectPermissions = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.mapPermissionsBasedOnModels(projectDataDict)
+                        projectDataDict.update(projectPermissions)
+                        projectDataDict = CreateOrUpdateOrgContainerAndAttachGroupsFromJson.popDataAttributes(projectDataDict)
 
                         projectDataDict['group'] = returnGroupData.pk
 

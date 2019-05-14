@@ -1,4 +1,4 @@
-from dependantmodels.models import ContainerView
+from dependantmodels.models import ContainerView,OrganizationProject,OrganizationGroup
 from .serializers import ContainerViewSerializer
 
 class ContainerViewMethods:
@@ -20,6 +20,8 @@ class ContainerViewMethods:
             # update
             if containerViews.exists():
                 containerInstance = containerViews.first()
+                containerInstance.organizationgroup_set.all().update(active = False)
+                OrganizationProject.objects.filter(group__in = containerInstance.organizationgroup_set.all()).update(active = False)
                 containerInstance.organizationgroup_set.remove(*containerInstance.organizationgroup_set.all())
                 containerData = ContainerViewSerializer(containerInstance, data = data)
             # create

@@ -111,6 +111,7 @@ class OrganizationProjectSerializer(DynamicFieldsMixin,ModelSerializer):
             'description',
             'readLabels',
             'writeLabels',
+            'owner',
             'data',
             'group'
         ]
