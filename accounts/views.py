@@ -15,13 +15,14 @@ from rest_framework.response import Response
 from accounts.authentication import UserAuthentication
 from general.permissions import SuperUserPermission
 
+
 class userDetail(APIView):
     authentication_classes = (UserAuthentication,)
     permission_classes = []
 
     def get(self, request, format=None):
         """
-        Return a list of all users.
+        Return users details.
         """ 
         user = {}
         if self.request.user:
@@ -35,9 +36,8 @@ class ListObjectPermissions(APIView):
 
     def get(self, request, *args, **kwargs):
         """
-        return the permissions of the obj
+        Return the permissions of the obj
         """ 
-
         data = {}
         data['user'] = self.request.user
 

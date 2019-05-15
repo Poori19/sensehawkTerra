@@ -5,6 +5,9 @@ from .middleware import OktaAuthenticationMiddleware
 
 
 class UserAuthentication(authentication.BaseAuthentication):
+    """
+        Check if the user is active.
+    """
     def authenticate(self, request):
         try:
             user = getattr(request._request, 'user', None)

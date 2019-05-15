@@ -23,16 +23,12 @@ from drf_dynamic_fields import DynamicFieldsMixin
 class ElementSerializer(ModelSerializer):
     class Meta:
         model = Element
-        fields = [
-            "content_type",
-            "object_id"
-        ]
+        fields = []
 
     def to_representation(self, instance):
         response = super().to_representation(instance)
         if instance and instance.uid:
             response['uid'] = instance.uid
-        if instance
         return response
 
 

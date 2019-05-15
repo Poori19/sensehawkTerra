@@ -3,6 +3,7 @@ from botocore.client import Config
 from accounts.constants import SIGNED_URL_EXPIRATION_TIME,PRE_SIGNED_URL_REPORTSTYPE,ORTHO_TILES_URL
 import environ
 env = environ.Env()
+from encoder.utils import EncryptDecrypt
 
 class AWSSignedUrl():
 
@@ -49,7 +50,10 @@ class OrganizationProjectData:
         url = ""
         if dataElement.get('bucket') and dataElement.get('key'):
             url = AWSSignedUrl.get_signed_url(dataElement.get('bucket'),dataElement.get('key'),dataElement.get('region') ,SIGNED_URL_EXPIRATION_TIME)        
-        return url
+            # encrypting the AWS Signature
+            # encryptedUrl = EncryptDecrypt.encryptAWSSignature(url)]
+            encryptedUrl = url
+        return encryptedUrl
 
     @staticmethod
     def send_urls_and_pre_signed_urls_data(data):

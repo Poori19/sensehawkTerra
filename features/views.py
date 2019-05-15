@@ -353,32 +353,6 @@ class FeatureViewSet(viewsets.ModelViewSet):
             return Response(returnFormat)
 
 
-# class GetAllFeaturesConnectedToMasterFeature(RetrieveAPIView):
-
-#     queryset = Feature.objects.all()
-#     serializer_class = FeatureSerializer
-#     authentication_classes = [UserAuthentication]
-#     permission_classes = [CanReadFeature]
-#     lookup_field = 'uid'CanUpdateFeature
-#     pagination_class = FCanUpdateFeature
-
-
-#     def retrieve(self, rCanUpdateFeature:
-
-#         data = []
-#         try:
-#             uid = kwargs.get('uid', None)
-#             instance = self.get_queryset().get(**kwargs )
-#         except self.get_queryset().model.DoesNotExist:
-#             return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
-
-#         features =  self.get_queryset().filter(Q(hierarchyProperties = {'master_uid' : instance.uid})  | Q(uid = instance.uid)).distinct()
-#         if features.exists():
-#             serializer = self.get_serializer(features, many = True)
-#             data = serializer.data
-#         return Response({'error': False, 'success': True, 'data': data}, status= status.HTTP_200_OK)
-
-
 class FeatureTypeViewSet(viewsets.ModelViewSet):
     """
     A viewset for model 'FeatureType'
@@ -386,6 +360,7 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
     queryset = FeatureType.objects.filter(active = True)
     serializer_class = FeatureTypeSerializer
     authentication_classes = [UserAuthentication]
+    permission_classes = []
     lookup_field = 'uid'
 
 
@@ -404,12 +379,6 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
         else:
             return queryset.filter(Q(org__uid = user['organization']) | Q(owner__uid = user['uid']))
 
-        # if 'organization' in user and user['organization']: 
-        #     org = Organization.objects.filter((Q(name= user['organization'])| Q(uid = user['organization'])))
-        #     if org.exists():
-        #         return queryset.filter((Q(active = True)) & (Q(org= org) | Q(org= None)))
-        
-        # return queryset.filter(active = True)
         return queryset
 
 
@@ -417,7 +386,7 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
         return serializer.save(owner = self.request.user)
 
     def create(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success' : False, 'errorList': [], 'data': []}
+        returnFormat = {}
 
         if not UserClass.UserIsSuperUser(request.user) and not request.data.get('org') and request.user.get('organization'):
             request.data['org'] = request.user.get('organization')
@@ -442,31 +411,38 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
             returnFormat['errorList'] = serializer.errors
             return Response(returnFormat, status=status.HTTP_400_BAD_REQUEST)
             
-        returnFormat['success'] = True
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def retrieve(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
-
+    
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid =uid )
+
             # May raise a permission denied
             self.check_object_permissions(self.request, instance)
+
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
     
         serializer = self.get_serializer(instance)
-        returnFormat['data'] = serializer.data
-        return Response(returnFormat, status= status.HTTP_200_OK)
+        return Response(serializer.data, status= status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
-        returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
+
         partial = kwargs.pop('partial', False)
+
+        if not UserClass.UserIsSuperUser(request.user) and request.data.get('org'):
+            request.data.pop('org')
+
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
+
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
         
@@ -479,37 +455,24 @@ class FeatureTypeViewSet(viewsets.ModelViewSet):
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        returnFormat['data'] = serializer.data
-        return Response(returnFormat,status= status.HTTP_200_OK)
-
-    # def list(self, request, *args, **kwargs):
-
-    #     returnFormat = {'error': False, 'success': True , 'errorList': [], 'data': []}
-    #     queryset = self.filter_queryset(self.get_queryset())
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     returnFormat['data'] = serializer.data
-    #     return Response(returnFormat,status= status.HTTP_200_OK)
+        return Response(serializer.data,status= status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
+
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+
+            FeatureType.objects.filter(featureTypeGroup = instance).delete()
             self.perform_destroy(instance)
+
         except self.get_queryset().model.DoesNotExist:
-            return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
-        return Response({'success': True},status=status.HTTP_204_NO_CONTENT)
+            return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # def get_serializer_class(self):
-    #     if self.action in ['create', 'update', 'partial_update']:
-    #         return FeatureTypeCreateUpdateSerializer
-    #     return self.serializer_class
-
-    
 
 class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
     """
@@ -518,15 +481,15 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
     queryset = FeatureTypeGroup.objects.filter(active = True)
     serializer_class = FeatureTypeGroupSerializer
     authentication_classes = [UserAuthentication]
+    permission_classes = []
     lookup_field = 'uid'
 
+    # @action(methods=['get'], detail=False,renderer_classes=[JSONRenderer], permission_classes=[],url_path='features-types')
+    # def featuresTypes(self, request, *args, **kwargs):
+    #     queryset = self.filter_queryset(self.get_queryset())
 
-    @action(methods=['get'], detail=False,renderer_classes=[JSONRenderer], permission_classes=[],url_path='features-types')
-    def featuresTypes(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-
-        data = FeatureTypeGroupCustomSerializer(queryset, many = True).data
-        return Response({"success": True, "data" :data },status = status.HTTP_200_OK )
+    #     data = FeatureTypeGroupCustomSerializer(queryset, many = True).data
+    #     return Response(data,status = status.HTTP_200_OK )
     
     def list(self, request, *args, **kwargs):
         
@@ -570,7 +533,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         if UserClass.UserIsSuperUser(user):
             return queryset.order_by('org')
         else:
-            return queryset.filter(Q(org__uid = user['organization']) | Q(owner__uid = user['uid']))
+            return queryset.filter(Q(org__uid = user['organization']) | Q(owner__uid = user['uid'])).order_by('-updated')
 
 
     def perform_create(self, serializer):
@@ -581,7 +544,7 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         Creates the FeatureTypeGroup and Connect the FeatureTypeGroup to FeatureType
         """
         featureTypes = []
-        returnFormat = {'error': False, 'success': False, 'errorList': [], 'data': []}
+        returnFormat = {}
 
         if not UserClass.UserIsSuperUser(request.user) and not request.data.get('org') and request.user.get('organization'):
             request.data['org'] = request.user.get('organization')
@@ -600,9 +563,8 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
             headers = self.get_success_headers(serializer.data)
             if featureTypes:
                 featureTypes.update(featureTypeGroup = instance)
-            returnFormat['data'] = self.get_serializer(instance).data
-            returnFormat['success'] = True
-            return Response(returnFormat, status=status.HTTP_201_CREATED, headers=headers)
+            data = self.get_serializer(instance).data
+            return Response(data, status=status.HTTP_201_CREATED, headers=headers)
         else:
             returnFormat['error']= True
             returnFormat['errorList'] = serializer.errors
@@ -615,10 +577,17 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
 
         featureTypes= []
         partial = kwargs.pop('partial', False)
+
+        if not UserClass.UserIsSuperUser(request.user) and request.data.get('org'):
+            request.data.pop('org')
         
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
+
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist' ,'success': False, 'data': []}, status= status.HTTP_404_NOT_FOUND)
     
@@ -626,10 +595,8 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         if serializer.is_valid():
             self.perform_update(serializer)
-            returnFormat = {}
-            returnFormat['success'] = True
-            returnFormat['data'] = self.get_serializer(instance).data
-            return Response(returnFormat, status = status.HTTP_200_OK)
+            data = self.get_serializer(instance).data
+            return Response(data, status = status.HTTP_200_OK)
 
         if getattr(instance, '_prefetched_objects_cache', None):
             # If 'prefetch_related' has been applied to a queryset, we need to
@@ -642,10 +609,16 @@ class FeatureTypeGroupViewSet(viewsets.ModelViewSet):
         try:
             uid = kwargs.get('uid', None)
             instance = self.get_queryset().get(uid = uid )
+
+            # May raise a permission denied
+            self.check_object_permissions(self.request, instance)
+
             FeatureType.objects.filter(featureTypeGroup = instance).delete()
             self.perform_destroy(instance)
+
         except self.get_queryset().model.DoesNotExist:
             return Response({'error': True, 'errorList': 'object wit uid doesnot exist'}, status= status.HTTP_404_NOT_FOUND)
-        return Response({'success': True}, status=status.HTTP_204_NO_CONTENT)
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 

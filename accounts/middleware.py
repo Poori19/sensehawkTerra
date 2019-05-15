@@ -16,8 +16,6 @@ import environ
 env = environ.Env()
 
 
-from .userdata import users
-
 class OktaAuthenticationMiddleware(MiddlewareMixin):
     def process_request(self, request):
         request.user = SimpleLazyObject(lambda: self.__class__.get_jwt_user(request))

@@ -10,14 +10,12 @@ from .views import (
 )
 
 
-
-
 from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register(r'projects', OrganizationProjectViewSet)
 
 urlpatterns = [
-    url(r'^CreateOrgGroupProjectFromJson/$', CreateOrgGroupProjectFromJson.as_view(), name='CreateOrgGroupProjectFromJson'),
+    #url(r'^CreateOrgGroupProjectFromJson/$', CreateOrgGroupProjectFromJson.as_view(), name='CreateOrgGroupProjectFromJson'),
     url(r'^create/$', OrganizationCreateAPIView.as_view(), name='CreateOrg'),
     url(r'^group/create/$', OrganizationGroupCreateAPIView.as_view(), name='CreateGroup')
 ]

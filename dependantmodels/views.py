@@ -32,6 +32,7 @@ from .serializers import (
     OrganizationCreateUpdateSerializer
 )
 from accounts.authentication import UserAuthentication
+from accounts.permissions import SuperUserPermission
 from accounts.utils import UserClass
 from .paginators import ProjectPaginator
 
@@ -103,7 +104,7 @@ class CreateOrgGroupProjectFromJson(APIView):
 class GetAllProjectsUserHasAccess(APIView):
 
     authentication_classes = [UserAuthentication]
-    permission_classes = []
+    permission_classes = [SuperUserPermission]
 
     def get(self, request):
 
@@ -139,9 +140,8 @@ class OrganizationProjectViewSet(viewsets.ModelViewSet):
     """
     queryset = OrganizationProject.objects.all()
     serializer_class = OrganizationProjectSerializer
-    authentication_classes = (UserAuthentication,)
-    permission_classes = []
-    #authentication_classes = []
+    authentication_classes = [UserAuthentication]
+    permission_classes = [SuperUserPermission]
     pagination_class = ProjectPaginator
     lookup_field = 'uid'
 
@@ -165,8 +165,9 @@ class OrganizationGroupCreateAPIView(CreateAPIView):
     queryset = OrganizationGroup.objects.all()
     serializer_class = OrganizationGroupCreateUpdateSerializer
     #permission_classes = [CanCreateViewTable]
-    permission_classes = []
-    authentication_classes = (UserAuthentication,)
+    authentication_classes = [UserAuthentication]
+    permission_classes = [SuperUserPermission]
+   
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

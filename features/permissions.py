@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from dependantmodels.models import OrganizationProject,ContainerView
+from dependantmodels.models import OrganizationProject,OrganizationGroup,ContainerView
 from accounts.permissions import SuperUserPermission
 from general.permissions import (
     SuperUserPermission,
@@ -15,7 +15,11 @@ class CanListFeature(permissions.BasePermission):
 
     def has_permission(self, request, view):
 
+        containerViewUid = None
+
         projectUid = request.parser_context.get('kwargs').get('project_uid', None)
+
+        groupUid = request.parser_context.get('kwargs').get('group_uid', None)
 
         if SuperUserPermission.has_permission(self, request, view):
             return True
@@ -23,8 +27,12 @@ class CanListFeature(permissions.BasePermission):
         if IsManagerOrOwner.has_permission(self, request, view):
             return True
 
-        containerViewUid = OrganizationProject.objects.filter(uid = projectUid).values_list('group__containerView', flat = True)   
+        if projectUid:
+            containerViewUid = OrganizationProject.objects.filter(uid = projectUid).values_list('group__containerView', flat = True)   
         
+        elif groupUid:
+            containerViewUid = OrganizationGroup.objects.filter(uid = groupUid).values_list('containerView', flat = True)   
+
         if containerViewUid and containerViewUid[0]:
             
             containerView = ContainerView.objects.get(uid = containerViewUid[0])    
@@ -36,6 +44,7 @@ class CanListFeature(permissions.BasePermission):
                 return True
                     
         return False
+
 
 
 class CanCreateFeature(permissions.BasePermission):

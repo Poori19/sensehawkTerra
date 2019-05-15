@@ -34,7 +34,6 @@ class UserClass:
 
 
 class RandomStringGenerator:
-
     # This function generates random string
     @staticmethod
     def randomstring(stringLength = None):

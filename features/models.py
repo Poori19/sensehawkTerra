@@ -11,6 +11,7 @@ from django.contrib.postgres.fields import JSONField
 from dependantmodels.models import Organization,OrganizationProject
 from accounts.utils import RandomStringGenerator
 from elements.models import Element 
+from elements.serializers import ElementSerializer
 
 class FeatureTypeGroup(models.Model):
     element = models.OneToOneField(Element,null = True, blank = True)
@@ -19,9 +20,18 @@ class FeatureTypeGroup(models.Model):
     active =  models.BooleanField(default=True)
     org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True) 
     owner = JSONField()
+    
+    updated = models.DateTimeField(auto_now=True, auto_now_add=False)
+    timestamp = models.DateTimeField(auto_now=False, auto_now_add=True)
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        #unique_together = [['name', 'org']]
+        indexes = [
+            models.Index(fields=['uid','org'], name='uid_org_idx'),
+        ]
 
 class FeatureType(models.Model):
     element = models.OneToOneField(Element,null = True, blank = True)
@@ -40,6 +50,7 @@ class FeatureType(models.Model):
 
     class Meta:
         #ordering = ["-name"]
+        #unique_together = [['name', 'org']]
         indexes = [
             models.Index(fields=['uid','org'], name='uid_org_idx'),
         ]
@@ -92,6 +103,21 @@ def pre_save_uid_receiver(sender, instance, *args, **kwargs):
         uid = RandomStringGenerator().randomstring(12)   
         instance.uid = create_uid(instance,uid)
 
+def post_create_receiver(sender, instance, created, **kwargs):
+    if created:
+        data = {}
+        elementSerializer = ElementSerializer(data = data)
+        if elementSerializer.is_valid():
+            element = elementSerializer.save()
+            instance.element = element
+            instance.save()
+
+# Pre Save Signals
 pre_save.connect(pre_save_uid_receiver, sender=FeatureType)
 pre_save.connect(pre_save_uid_receiver, sender=Feature)
 pre_save.connect(pre_save_uid_receiver, sender=FeatureTypeGroup)
+
+# Post Save Signal
+post_save.connect(post_create_receiver, sender=Feature)
+post_save.connect(post_create_receiver, sender=FeatureType)
+post_save.connect(post_create_receiver, sender=FeatureTypeGroup)
